@@ -29,9 +29,16 @@ fun main() {
             route("/todos") {
                 get {
                     // Respond with a list of todo items from the database
-                    call.respond(listOf(
-                        TodoItem(1, "Buy groceries", "Buy milk, eggs, and bread"),
-                        TodoItem(2, "Pay bills", "Pay electricity and water bills")
+                    val page = call.request.queryParameters["page"]?.toInt() ?: 1
+                    val limit = call.request.queryParameters["limit"]?.toInt() ?: 10
+                    call.respond(mapOf(
+                        "data" to listOf(
+                            TodoItem(1, "Buy groceries", "Buy milk, eggs, and bread"),
+                            TodoItem(2, "Pay bills", "Pay electricity and water bills")
+                        ),
+                        "page" to page,
+                        "limit" to limit,
+                        "total" to 2
                     ))
                 }
                 post {
@@ -39,8 +46,23 @@ fun main() {
                     val todo = call.receive<TodoItem>()
                     call.respond(HttpStatusCode.Created, todo)
                 }
-                delete {
+                put("/{id}") {
+                    // update the todo item with the given id in the database
+                    val id = call.parameters["id"]?.toIntOrNull()
+                    if (id == null) {
+                        call.respond(HttpStatusCode.BadRequest, "Invalid ID")
+                        return@put
+                    }
+                    val todo = call.receive<TodoItem>()
+                    call.respond(HttpStatusCode.OK, todo.copy(id = id))
+                }
+                delete("/{id}") {
                     // delete all todo items from the database
+                    val id = call.parameters["id"]?.toIntOrNull()
+                    if (id == null) {
+                        call.respond(HttpStatusCode.BadRequest, "Invalid ID")
+                        return@delete
+                    }
                     call.respond(HttpStatusCode.NoContent)
                 }
             }
